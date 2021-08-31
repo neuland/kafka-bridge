@@ -1,0 +1,14 @@
+@namespace("de.neuland.kafkabridge")
+protocol ProductProtocol {
+	record ProductKey {
+		string code;
+	}
+
+	record Product {
+		ProductType type;
+		string name;
+		timestamp_ms available_since;
+	}
+
+	enum ProductType {REGULAR, SPECIAL}
+}
