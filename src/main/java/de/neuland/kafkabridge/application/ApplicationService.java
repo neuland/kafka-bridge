@@ -1,5 +1,6 @@
 package de.neuland.kafkabridge.application;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import de.neuland.kafkabridge.domain.SchemaRegistryAvroSerializedDataForKafka;
 import de.neuland.kafkabridge.domain.TheConverter;
 import de.neuland.kafkabridge.domain.kafka.Publisher;
@@ -15,12 +16,12 @@ import static java.util.function.Function.identity;
 @Service
 public class ApplicationService {
     private final AvroSchemaRepository avroSchemaRepository;
-    private final TheConverter theConverter;
+    private final TheConverter<JsonNode> theConverter;
     private final Publisher<String, SchemaRegistryAvroSerializedDataForKafka> stringKeyAvroValuePublisher;
     private final Publisher<SchemaRegistryAvroSerializedDataForKafka, SchemaRegistryAvroSerializedDataForKafka> avroKeyAvroValuePublisher;
 
     public ApplicationService(AvroSchemaRepository avroSchemaRepository,
-                              TheConverter theConverter,
+                              TheConverter<JsonNode> theConverter,
                               Publisher<String, SchemaRegistryAvroSerializedDataForKafka> stringKeyAvroValuePublisher,
                               Publisher<SchemaRegistryAvroSerializedDataForKafka, SchemaRegistryAvroSerializedDataForKafka> avroKeyAvroValuePublisher) {
         this.avroSchemaRepository = avroSchemaRepository;

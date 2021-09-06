@@ -19,7 +19,7 @@ class TopicsControllerTest extends AbstractControllerTest {
                                   .header("Key-Schema-Subject", "<key-schema-subject>")
                                   .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Schema-Subject", "<value-schema-subject>")
-                                  .bodyValue("<value>")
+                                  .bodyValue("[\"value\"]")
                                   .exchange();
 
         // then
@@ -36,12 +36,12 @@ class TopicsControllerTest extends AbstractControllerTest {
         // when
         var result = webTestClient.post()
                                   .uri("/topics/%s/send".formatted("<topic>"))
-                                  .header("Key", "<key>")
+                                  .header("Key", "[\"key\"]")
                                   .header("Key-Content-Type", APPLICATION_JSON_VALUE)
                                   .header("Key-Schema-Subject", "<key-schema-subject>")
                                   .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Schema-Subject", "<value-schema-subject>")
-                                  .bodyValue("<value>")
+                                  .bodyValue("[\"value\"]")
                                   .exchange();
 
         // then
@@ -58,11 +58,11 @@ class TopicsControllerTest extends AbstractControllerTest {
         // when
         var result = webTestClient.post()
                                   .uri("/topics/%s/send".formatted("<topic>"))
-                                  .header("Key", "<key>")
+                                  .header("Key", "[\"key\"]")
                                   .header("Key-Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Schema-Subject", "<value-schema-subject>")
-                                  .bodyValue("<value>")
+                                  .bodyValue("[\"value\"]")
                                   .exchange();
 
         // then
@@ -79,7 +79,7 @@ class TopicsControllerTest extends AbstractControllerTest {
         // when
         var result = webTestClient.post()
                                   .uri("/topics/%s/send".formatted("<topic>"))
-                                  .header("Key", "<key>")
+                                  .header("Key", "[\"key\"]")
                                   .header("Key-Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Key-Schema-Subject", "<key-schema-subject>")
                                   .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
@@ -101,12 +101,12 @@ class TopicsControllerTest extends AbstractControllerTest {
         // when
         var result = webTestClient.post()
                                   .uri("/topics/%s/send".formatted("<topic>"))
-                                  .header("Key", "<key>")
+                                  .header("Key", "[\"key\"]")
                                   .header("Key-Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Key-Schema-Subject", "<key-schema-subject>")
                                   .header("Content-Type", APPLICATION_JSON_VALUE)
                                   .header("Schema-Subject", "<value-schema-subject>")
-                                  .bodyValue("<value>")
+                                  .bodyValue("[\"value\"]")
                                   .exchange();
 
         // then
@@ -123,11 +123,11 @@ class TopicsControllerTest extends AbstractControllerTest {
         // when
         var result = webTestClient.post()
                                   .uri("/topics/%s/send".formatted("<topic>"))
-                                  .header("Key", "<key>")
+                                  .header("Key", "[\"key\"]")
                                   .header("Key-Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Key-Schema-Subject", "<key-schema-subject>")
                                   .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
-                                  .bodyValue("<value>")
+                                  .bodyValue("[\"value\"]")
                                   .exchange();
 
         // then

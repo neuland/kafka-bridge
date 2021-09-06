@@ -1,8 +1,9 @@
 package de.neuland.kafkabridge.lib.templating;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.neuland.kafkabridge.domain.JsonString;
+import de.neuland.kafkabridge.domain.Json;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
@@ -23,9 +24,9 @@ public class TemplateRenderer {
         this.objectMapper = objectMapper;
     }
 
-    public JsonString render(Path templatePath,
-                             JsonString input) {
-        return merge(new JsonString(render(templatePath)), input);
+    public Json<JsonNode> render(Path templatePath,
+                                 Json<String> input) {
+        return merge(new Json<>(render(templatePath)), input);
     }
 
     public String render(Path templatePath) {
@@ -35,14 +36,13 @@ public class TemplateRenderer {
         return templateEngine.process(templatePath.toString(), context);
     }
 
-    public JsonString merge(JsonString baseString,
-                            JsonString inputString) {
+    public Json<JsonNode> merge(Json<String> baseString,
+                                Json<String> inputString) {
         try {
             var base = objectMapper.readTree(baseString.value());
             var input = objectMapper.readTree(inputString.value());
             var output = objectMapper.updateValue(base, input);
-            var outputString = objectMapper.writeValueAsString(output);
-            return new JsonString(outputString);
+            return new Json<>(output);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error merging JSON", e);
         }

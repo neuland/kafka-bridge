@@ -1,10 +1,12 @@
 package de.neuland.kafkabridge.adapter.in;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.neuland.kafkabridge.application.ApplicationService;
 import de.neuland.kafkabridge.application.ConvertAndPublishAvroKeyAvroValueCommand;
 import de.neuland.kafkabridge.application.ConvertAndPublishCommand;
 import de.neuland.kafkabridge.application.ConvertAndPublishStringKeyAvroValueCommand;
-import de.neuland.kafkabridge.domain.JsonString;
+import de.neuland.kafkabridge.domain.Json;
 import de.neuland.kafkabridge.domain.kafka.RecordKey;
 import de.neuland.kafkabridge.domain.kafka.RecordValue;
 import de.neuland.kafkabridge.domain.kafka.Topic;
@@ -12,6 +14,7 @@ import de.neuland.kafkabridge.domain.schemaregistry.Subject;
 import de.neuland.kafkabridge.infrastructure.configuration.KafkaBridgeConfiguration;
 import de.neuland.kafkabridge.lib.templating.TemplateRenderer;
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,13 +32,16 @@ public class TopicsController {
     private final KafkaBridgeConfiguration kafkaBridgeConfiguration;
     private final TemplateRenderer templateRenderer;
     private final ApplicationService applicationService;
+    private final ObjectMapper objectMapper;
 
     public TopicsController(KafkaBridgeConfiguration kafkaBridgeConfiguration,
                             TemplateRenderer templateRenderer,
-                            ApplicationService applicationService) {
+                            ApplicationService applicationService,
+                            ObjectMapper objectMapper) {
         this.kafkaBridgeConfiguration = kafkaBridgeConfiguration;
         this.templateRenderer = templateRenderer;
         this.applicationService = applicationService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping(path = "/{topic}/send")
@@ -63,13 +69,13 @@ public class TopicsController {
 
         final ConvertAndPublishCommand command;
 
-        var recordValue = new RecordValue<>(asJsonString(value, maybeValueTemplatePath));
+        var recordValue = new RecordValue<>(asJson(value, maybeValueTemplatePath));
 
         if (APPLICATION_AVRO_JSON.equals(keyContentType)) {
             if (keySchemaSubject == null)
                 return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with an Avro schema registered in a schema registry is supported. Please specify the 'Key-Schema-Subject' header."));
 
-            var recordKey = new RecordKey<>(asJsonString(key, maybeKeyTemplatePath));
+            var recordKey = new RecordKey<>(asJson(key, maybeKeyTemplatePath));
 
             command = new ConvertAndPublishAvroKeyAvroValueCommand(topic,
                                                                    recordKey,
@@ -90,16 +96,16 @@ public class TopicsController {
                    .map(__ -> ResponseEntity.ok().build());
     }
 
-    private JsonString asJsonString(String keyOrValue,
-                                    String maybeTemplatePath) {
+    private Json<JsonNode> asJson(String keyOrValue,
+                                  String maybeTemplatePath) {
         return Option.of(maybeTemplatePath).map(templatePath -> {
             return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
                     () -> Path.of(templatePath),
                     templateDirectory -> templateDirectory.resolve(templatePath)
             );
         }).fold(
-                () -> new JsonString(keyOrValue),
-                templatePath -> templateRenderer.render(templatePath, new JsonString(keyOrValue))
+                () -> new Json<>(Try.of(() -> objectMapper.readTree(keyOrValue)).get()),
+                templatePath -> templateRenderer.render(templatePath, new Json<>(keyOrValue))
         );
     }
 }

@@ -1,14 +1,15 @@
 package de.neuland.kafkabridge.application;
 
-import de.neuland.kafkabridge.domain.JsonString;
+import com.fasterxml.jackson.databind.JsonNode;
+import de.neuland.kafkabridge.domain.Json;
 import de.neuland.kafkabridge.domain.kafka.RecordKey;
 import de.neuland.kafkabridge.domain.kafka.RecordValue;
 import de.neuland.kafkabridge.domain.kafka.Topic;
 import de.neuland.kafkabridge.domain.schemaregistry.Subject;
 
 public record ConvertAndPublishAvroKeyAvroValueCommand(Topic topic,
-                                                       RecordKey<JsonString> recordKey,
-                                                       RecordValue<JsonString> recordValue,
+                                                       RecordKey<Json<JsonNode>> recordKey,
+                                                       RecordValue<Json<JsonNode>> recordValue,
                                                        Subject keySchemaSubject,
                                                        Subject valueSchemaSubject) implements ConvertAndPublishCommand {
 }

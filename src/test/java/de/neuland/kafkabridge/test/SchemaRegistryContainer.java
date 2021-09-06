@@ -26,7 +26,8 @@ public class SchemaRegistryContainer extends GenericContainer<SchemaRegistryCont
                          kafka.getNetworkAliases().get(0) + ":" + 9092);
     }
 
-    public SchemaRegistryContainer withKafka(Network network, String bootstrapServers) {
+    public SchemaRegistryContainer withKafka(Network network,
+                                             String bootstrapServers) {
         withNetwork(network);
         withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry");
         withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:" + SCHEMA_REGISTRY_PORT);

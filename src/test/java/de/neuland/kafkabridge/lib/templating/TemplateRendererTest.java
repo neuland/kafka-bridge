@@ -1,6 +1,6 @@
 package de.neuland.kafkabridge.lib.templating;
 
-import de.neuland.kafkabridge.domain.JsonString;
+import de.neuland.kafkabridge.domain.Json;
 import de.neuland.kafkabridge.infrastructure.json.ObjectMapperFactory;
 import de.neuland.kafkabridge.infrastructure.templating.TemplateEngineFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -44,10 +44,10 @@ class TemplateRendererTest {
 
         // when
         var result = templateRenderer.render(templatePath,
-                                             new JsonString("""
-                                                                    {
-                                                                      "id": "1234"
-                                                                    }"""));
+                                             new Json<>("""
+                                                                {
+                                                                  "id": "1234"
+                                                                }"""));
 
         var dateInEpochMilliseconds = LocalDateTime.parse("2021-08-31T20:29:55")
                                                    .atZone(ZoneId.systemDefault())
