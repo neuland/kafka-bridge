@@ -35,3 +35,9 @@ jobs:
           jib:build
           --no-transfer-progress
           -Dcontainer-image.tag=$( git describe --tags --exact-match --abbrev=0 )
+      - name: Build and publish container image as latest
+        run: >-
+          mvn
+          jib:build
+          --no-transfer-progress
+          -Dcontainer-image.tag=latest
