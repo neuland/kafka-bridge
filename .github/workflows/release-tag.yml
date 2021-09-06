@@ -1,14 +1,16 @@
-name: Manually build and publish container image
+name: Release tag
 
 on:
-  workflow_dispatch:
-
-permissions:
-  packages: write
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
   build-and-publish-container-image:
     runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
 
     steps:
       - uses: actions/checkout@v2
@@ -20,7 +22,7 @@ jobs:
           java-version: '16'
       - run: >-
           mvn
-          versions:set -DnewVersion=$( git describe --tags --abbrev=0 )-SNAPSHOT-$( git rev-parse --short HEAD )
+          versions:set -DnewVersion=$( git describe --tags --exact-match --abbrev=0 )
           versions:commit
           --no-transfer-progress
       - name: Test
@@ -32,4 +34,4 @@ jobs:
           mvn
           jib:build
           --no-transfer-progress
-          -Dcontainer-image.tag=$( git describe --tags )
+          -Dcontainer-image.tag=$( git describe --tags --exact-match --abbrev=0 )

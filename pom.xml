@@ -12,7 +12,7 @@
 
     <groupId>de.neuland-bfi.kafka-bridge</groupId>
     <artifactId>kafka-bridge</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.0</version>
     <name>kafka-bridge</name>
     <description>Kafka Bridge</description>
 
@@ -25,6 +25,8 @@
     </licenses>
 
     <properties>
+        <container-image.tag>latest</container-image.tag>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>16</maven.compiler.source>
         <maven.compiler.target>16</maven.compiler.target>
@@ -80,7 +82,7 @@
                         <image>openjdk:16-alpine</image>
                     </from>
                     <to>
-                        <image>ghcr.io/neuland/kafka-bridge</image>
+                        <image>ghcr.io/neuland/kafka-bridge:${container-image.tag}</image>
                     </to>
                 </configuration>
             </plugin>
