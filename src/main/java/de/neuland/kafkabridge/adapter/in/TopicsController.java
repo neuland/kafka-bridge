@@ -63,29 +63,13 @@ public class TopicsController {
 
         final ConvertAndPublishCommand command;
 
-        var recordValue = new RecordValue<>(Option.of(maybeValueTemplatePath).map(valueTemplatePath -> {
-            return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
-                    () -> Path.of(valueTemplatePath),
-                    templateDirectory -> templateDirectory.resolve(valueTemplatePath)
-            );
-        }).fold(
-                () -> new JsonString(value),
-                templatePath -> templateRenderer.render(templatePath, new JsonString(value)))
-        );
+        var recordValue = new RecordValue<>(asJsonString(value, maybeValueTemplatePath));
 
         if (APPLICATION_AVRO_JSON.equals(keyContentType)) {
             if (keySchemaSubject == null)
                 return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with an Avro schema registered in a schema registry is supported. Please specify the 'Key-Schema-Subject' header."));
 
-            var recordKey = new RecordKey<>(Option.of(maybeKeyTemplatePath).map(keyTemplatePath -> {
-                return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
-                        () -> Path.of(keyTemplatePath),
-                        templateDirectory -> templateDirectory.resolve(keyTemplatePath)
-                );
-            }).fold(
-                    () -> new JsonString(key),
-                    keyTemplatePath -> templateRenderer.render(keyTemplatePath, new JsonString(key))
-            ));
+            var recordKey = new RecordKey<>(asJsonString(key, maybeKeyTemplatePath));
 
             command = new ConvertAndPublishAvroKeyAvroValueCommand(topic,
                                                                    recordKey,
@@ -104,5 +88,18 @@ public class TopicsController {
         return Mono.fromFuture(applicationService.convertAndPublish(command)
                                                  .toCompletableFuture())
                    .map(__ -> ResponseEntity.ok().build());
+    }
+
+    private JsonString asJsonString(String keyOrValue,
+                                    String maybeTemplatePath) {
+        return Option.of(maybeTemplatePath).map(templatePath -> {
+            return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
+                    () -> Path.of(templatePath),
+                    templateDirectory -> templateDirectory.resolve(templatePath)
+            );
+        }).fold(
+                () -> new JsonString(keyOrValue),
+                templatePath -> templateRenderer.render(templatePath, new JsonString(keyOrValue))
+        );
     }
 }
