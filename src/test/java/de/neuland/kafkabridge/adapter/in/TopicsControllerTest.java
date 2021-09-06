@@ -1,6 +1,6 @@
 package de.neuland.kafkabridge.adapter.in;
 
-import de.neuland.kafkabridge.test.AbstractControllerAcceptanceTest;
+import de.neuland.kafkabridge.test.AbstractControllerTest;
 import org.junit.jupiter.api.Test;
 
 import static de.neuland.kafkabridge.lib.http.MediaTypes.APPLICATION_AVRO_JSON_VALUE;
@@ -8,7 +8,7 @@ import static org.mockito.BDDMockito.then;
 import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-class TopicsControllerTest extends AbstractControllerAcceptanceTest {
+class TopicsControllerTest extends AbstractControllerTest {
 
     @Test
     void shouldHaveBadRequestIfKeyIsMissing() {

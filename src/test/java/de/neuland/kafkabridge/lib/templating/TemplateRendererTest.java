@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
+import static java.nio.file.Files.createTempFile;
+import static java.nio.file.Files.writeString;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 class TemplateRendererTest {
@@ -55,9 +57,9 @@ class TemplateRendererTest {
     private Path givenTemplate(String fileExtension,
                                String content) {
         try {
-            var templatePath = Files.createTempFile("kafkabridge-" + TemplateRendererTest.class.getSimpleName(), "." + fileExtension);
+            var templatePath = createTempFile("kafkabridge-" + TemplateRendererTest.class.getSimpleName(), "." + fileExtension);
             TEMPLATE_PATHS.add(templatePath);
-            Files.writeString(templatePath, content);
+            writeString(templatePath, content);
             return templatePath;
         } catch (IOException e) {
             throw new RuntimeException("Error on writing template", e);

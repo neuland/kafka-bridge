@@ -12,7 +12,7 @@
 
     <groupId>de.neuland-bfi.kafka-bridge</groupId>
     <artifactId>kafka-bridge</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <name>kafka-bridge</name>
     <description>Kafka Bridge</description>
 

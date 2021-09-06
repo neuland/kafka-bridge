@@ -9,6 +9,7 @@ import de.neuland.kafkabridge.domain.kafka.RecordKey;
 import de.neuland.kafkabridge.domain.kafka.RecordValue;
 import de.neuland.kafkabridge.domain.kafka.Topic;
 import de.neuland.kafkabridge.domain.schemaregistry.Subject;
+import de.neuland.kafkabridge.infrastructure.configuration.KafkaBridgeConfiguration;
 import de.neuland.kafkabridge.lib.templating.TemplateRenderer;
 import io.vavr.control.Option;
 import org.springframework.http.MediaType;
@@ -25,11 +26,14 @@ import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 @RestController
 @RequestMapping(path = "/topics")
 public class TopicsController {
+    private final KafkaBridgeConfiguration kafkaBridgeConfiguration;
     private final TemplateRenderer templateRenderer;
     private final ApplicationService applicationService;
 
-    public TopicsController(TemplateRenderer templateRenderer,
+    public TopicsController(KafkaBridgeConfiguration kafkaBridgeConfiguration,
+                            TemplateRenderer templateRenderer,
                             ApplicationService applicationService) {
+        this.kafkaBridgeConfiguration = kafkaBridgeConfiguration;
         this.templateRenderer = templateRenderer;
         this.applicationService = applicationService;
     }
@@ -39,11 +43,11 @@ public class TopicsController {
                                         @RequestHeader(name = "Key", required = false) String key,
                                         @RequestHeader(name = "Key-Content-Type", required = false) MediaType keyContentType,
                                         @RequestHeader(name = "Key-Schema-Subject", required = false) Subject keySchemaSubject,
-                                        @RequestHeader(name = "Key-Template-Path", required = false) String keyTemplatePath,
+                                        @RequestHeader(name = "Key-Template-Path", required = false) String maybeKeyTemplatePath,
                                         @RequestBody(required = false) String value,
                                         @RequestHeader(name = "Content-Type", required = false) MediaType valueContentType,
                                         @RequestHeader(name = "Schema-Subject", required = false) Subject valueSchemaSubject,
-                                        @RequestHeader(name = "Template-Path", required = false) String valueTemplatePath) {
+                                        @RequestHeader(name = "Template-Path", required = false) String maybeValueTemplatePath) {
 
         if (value == null)
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with a non-empty value is supported. Please send the value in the body."));
@@ -59,18 +63,28 @@ public class TopicsController {
 
         final ConvertAndPublishCommand command;
 
-        var recordValue = new RecordValue<>(Option.of(valueTemplatePath).fold(
+        var recordValue = new RecordValue<>(Option.of(maybeValueTemplatePath).map(valueTemplatePath -> {
+            return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
+                    () -> Path.of(valueTemplatePath),
+                    templateDirectory -> templateDirectory.resolve(valueTemplatePath)
+            );
+        }).fold(
                 () -> new JsonString(value),
-                templatePath -> templateRenderer.render(Path.of(templatePath), new JsonString(value)))
+                templatePath -> templateRenderer.render(templatePath, new JsonString(value)))
         );
 
         if (APPLICATION_AVRO_JSON.equals(keyContentType)) {
             if (keySchemaSubject == null)
                 return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with an Avro schema registered in a schema registry is supported. Please specify the 'Key-Schema-Subject' header."));
 
-            var recordKey = new RecordKey<>(Option.of(keyTemplatePath).fold(
+            var recordKey = new RecordKey<>(Option.of(maybeKeyTemplatePath).map(keyTemplatePath -> {
+                return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
+                        () -> Path.of(keyTemplatePath),
+                        templateDirectory -> templateDirectory.resolve(keyTemplatePath)
+                );
+            }).fold(
                     () -> new JsonString(key),
-                    templatePath -> templateRenderer.render(Path.of(templatePath), new JsonString(key))
+                    keyTemplatePath -> templateRenderer.render(keyTemplatePath, new JsonString(key))
             ));
 
             command = new ConvertAndPublishAvroKeyAvroValueCommand(topic,

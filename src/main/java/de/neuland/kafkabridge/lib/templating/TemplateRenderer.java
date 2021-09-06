@@ -8,9 +8,7 @@ import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.function.Function;
 
 import static java.time.ZoneOffset.UTC;
 
@@ -34,7 +32,6 @@ public class TemplateRenderer {
         var context = new Context();
         context.setVariable("utcZoneId", UTC);
         context.setVariable("systemDefaultZoneId", ZoneId.systemDefault());
-        context.setVariable("foo", (Function<LocalDateTime, String>) localDateTime -> Long.toString(localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()));
         return templateEngine.process(templatePath.toString(), context);
     }
 

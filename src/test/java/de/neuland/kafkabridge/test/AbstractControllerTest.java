@@ -12,7 +12,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
-public abstract class AbstractControllerAcceptanceTest {
+public abstract class AbstractControllerTest {
 
     @Autowired protected WebTestClient webTestClient;
     @MockBean protected ApplicationService applicationService;
