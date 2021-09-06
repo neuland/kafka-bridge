@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -47,11 +49,15 @@ class TemplateRendererTest {
                                                                       "id": "1234"
                                                                     }"""));
 
+        var dateInEpochMilliseconds = LocalDateTime.parse("2021-08-31T20:29:55")
+                                                   .atZone(ZoneId.systemDefault())
+                                                   .toInstant()
+                                                   .toEpochMilli();
         assertThatJson(result.value()).isEqualTo("""
                                                          {
-                                                           "date": 1630434595000,
+                                                           "date": %d,
                                                            "id": "1234"
-                                                         }""");
+                                                         }""".formatted(dateInEpochMilliseconds));
     }
 
     private Path givenTemplate(String fileExtension,
