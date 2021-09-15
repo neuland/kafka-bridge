@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kafka-bridge.fullname" . }}
+  labels:
+  {{- include "kafka-bridge.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+  {{- include "kafka-bridge.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+    {{- include "kafka-bridge.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kafka-bridge.serviceAccountName" . }}
+      securityContext:
+      {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+          resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: management.endpoint.health.probes.enabled
+              value: "true"
+            {{- if .Values.deployment.applicationConfigSecret }}
+            - name: SPRING_CONFIG_LOCATION
+              value: /kafka-bridge/config/application.yaml
+            {{- end }}
+            {{- if .Values.deployment.templatesConfigMap }}
+            - name: kafka-bridge.template-directory
+              value: /kafka-bridge/templates
+            {{- end }}
+            {{- with .Values.deployment.additionalEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.deployment.applicationConfigSecret }}
+            - mountPath: /kafka-bridge/config
+              name: application-config
+            {{- end }}
+            {{- if .Values.deployment.templatesConfigMap }}
+            - mountPath: /kafka-bridge/templates
+              name: templates
+      {{- end }}
+      volumes:
+        {{- if .Values.deployment.applicationConfigSecret }}
+        - name: application-config
+          secret:
+            secretName: {{ .Values.deployment.applicationConfigSecret }}
+        {{- end }}
+        {{- if .Values.deployment.templatesConfigMap }}
+        - name: templates
+          configMap:
+            name: {{ .Values.deployment.templatesConfigMap }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+  {{- toYaml . | nindent 8 }}
+  {{- end }}
