@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka-bridge
+description: Http => Kafka bridge with support for Avro
+type: application
+version: 0.0.1
+appVersion: "0.0.5"
