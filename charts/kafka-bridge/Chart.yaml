@@ -2,5 +2,8 @@ apiVersion: v2
 name: kafka-bridge
 description: Http => Kafka bridge with support for Avro
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: "0.0.5"
+maintainers:
+  - name: michel-zimmer
+    email: michel.zimmer@neuland-bfi.de
