@@ -50,6 +50,8 @@ spec:
           env:
             - name: management.endpoint.health.probes.enabled
               value: "true"
+            - name: spring.main.banner-mode
+              value: "off"
             {{- if .Values.deployment.applicationConfigSecret }}
             - name: SPRING_CONFIG_LOCATION
               value: /kafka-bridge/config/application.yaml
