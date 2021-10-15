@@ -3,7 +3,7 @@ name: kafka-bridge
 description: Http => Kafka bridge with support for Avro
 type: application
 version: 0.0.4
-appVersion: "0.0.6"
+appVersion: "0.0.7"
 maintainers:
   - name: michel-zimmer
     email: michel.zimmer@neuland-bfi.de
