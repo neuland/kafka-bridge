@@ -24,14 +24,19 @@ kafka-bridge:
     "[basic.auth.user.info]": <schema-registry-username>:<schema-registry-password>
 ```
 
-Example configuration for setting a specific template directory:
+Example configuration for setting a specific template configuration:
 
 ```yaml
 kafka-bridge:
   template-directory: /kafka-bridge/templates
+  template-cache-duration: 30s
 ```
 
-If unset, the template paths will be resolved against the working directory. This setting is ignored for absolute paths.
+If `template-directory` is unset, the template paths will be resolved against the working directory. 
+This setting is ignored for absolute paths.
+
+If `template-cache-duration` is unset, the template will not be cached.
+No caching is the default.
 
 ## Run
 
