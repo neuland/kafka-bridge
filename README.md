@@ -142,3 +142,56 @@ Actual JSON value that gets converted to Avro:
   "available_since": 1630566414000
 }
 ```
+
+### Example: Templating with parameters
+
+Request against Kafka Bridge:
+
+```
+POST /topics/Products/send
+Key: { "code": "Product-0001" }
+Key-Content-Type: application/avro+json
+Key-Schema-Subject: de.neuland.kafkabridge.ProductKey
+Content-Type: application/avro+json
+Schema-Subject: de.neuland.kafkabridge.Product
+Template-Path: value.json
+Template-Parameter-name: Kafka Bridge
+{
+  "code": "kafka"
+}
+```
+
+Contents of `value.json`:
+
+```
+{
+  "name": "[( ${parameters.name} )] Product"
+  "available_since": [(
+    ${ #temporals.createNowForTimeZone(systemDefaultZoneId).minusSeconds(5).toInstant().toEpochMilli() }
+  )]
+}
+```
+
+Actual JSON value that gets converted to Avro:
+
+```
+{
+  "code": "kafka",
+  "name": "Kafka Bridge Product",
+  "available_since": 1630566414000
+}
+```
+
+
+Working with defaults:
+
+```
+[# th:with="type=${parameters.type} ?: 'REGULAR'" ]
+{
+  "type": "[( ${type} )]",
+  "available_since": [(
+    ${ #temporals.createDateTime("2021-08-31T20:30:00").minusSeconds(5).atZone(utcZoneId).toInstant().toEpochMilli() }
+  )]
+}
+[/]
+```

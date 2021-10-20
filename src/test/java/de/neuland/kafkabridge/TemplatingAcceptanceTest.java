@@ -57,7 +57,19 @@ class TemplatingAcceptanceTest {
         configs.put(SPECIFIC_AVRO_READER_CONFIG, true);
         consumer = new KafkaConsumer<>(configs);
         consumer.subscribe(singleton(TemplatingAcceptanceTest.class.getSimpleName()));
+
+        registerSchema(ProductKey.class.getName(), ProductKey.getClassSchema());
+        registerSchema(Product.class.getName(), Product.getClassSchema());
     }
+
+
+    @BeforeEach
+    void registerSchemas() {
+        registerSchema(ProductKey.class.getName(), ProductKey.getClassSchema());
+        registerSchema(Product.class.getName(), Product.getClassSchema());
+    }
+
+
 
     @AfterEach
     void cleanUpKafkaConsumer() {
@@ -73,9 +85,6 @@ class TemplatingAcceptanceTest {
     @Test
     void shouldSendKafkaMessage() {
         // given
-        registerSchema(ProductKey.class.getName(), ProductKey.getClassSchema());
-        registerSchema(Product.class.getName(), Product.getClassSchema());
-
         var keyTemplatePath = givenTemplate("json", """
                 {
                   "code": "default"
@@ -109,6 +118,56 @@ class TemplatingAcceptanceTest {
                                   .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
                                   .header("Schema-Subject", recordValueSchemaSubject)
                                   .header("Template-Path", valueTemplatePath.toString())
+                                  .bodyValue(recordValue)
+                                  .exchange();
+
+        // then
+        result.expectStatus()
+              .isOk()
+              .expectBody()
+              .isEmpty();
+        assertThat(pollAllRemainingRecords(consumer)).singleElement().satisfies(consumerRecord -> {
+            assertThat(consumerRecord.key().getCode()).isEqualTo("default");
+            assertThat(consumerRecord.value().getType()).isEqualTo(SPECIAL);
+            assertThat(consumerRecord.value().getName()).isEqualTo("Kafka Bridge Product");
+            assertThat(consumerRecord.value().getAvailableSince()).isEqualTo(Instant.parse("2021-08-31T20:29:55Z"));
+        });
+    }
+
+    @Test
+    void shouldHaveTemplateVariable() {
+        // given
+        var valueTemplatePath = givenTemplate("json", """
+                [# th:with="type=${parameters.type} ?: 'REGULAR'" ]
+                {
+                  "type": "[( ${type} )]",
+                  "available_since": [(
+                    ${ #temporals.createDateTime("2021-08-31T20:30:00").minusSeconds(5).atZone(utcZoneId).toInstant().toEpochMilli() }
+                  )]
+                }
+                [/]
+                """);
+
+        var recordKeySchemaSubject = ProductKey.class.getName();
+        var recordKey = """
+            {"code": "default"}""";
+        var topic = TemplatingAcceptanceTest.class.getSimpleName();
+        var recordValueSchemaSubject = Product.class.getName();
+        var recordValue = """
+                {
+                  "name": "Kafka Bridge Product"
+                }""";
+
+        // when
+        var result = webTestClient.post()
+                                  .uri("/topics/%s/send".formatted(topic))
+                                  .header("Key", recordKey)
+                                  .header("Key-Content-Type", APPLICATION_AVRO_JSON_VALUE)
+                                  .header("Key-Schema-Subject", recordKeySchemaSubject)
+                                  .header("Content-Type", APPLICATION_AVRO_JSON_VALUE)
+                                  .header("Schema-Subject", recordValueSchemaSubject)
+                                  .header("Template-Path", valueTemplatePath.toString())
+                                  .header("Template-Parameter-type", "SPECIAL")
                                   .bodyValue(recordValue)
                                   .exchange();
 
