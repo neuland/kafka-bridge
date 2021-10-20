@@ -136,6 +136,7 @@ class TemplateRendererTest {
     }
 
     private TemplateRenderer givenTemplateRenderer(Option<Duration> maybeCacheDuration) {
+        given(configuration.getMaybeTemplateDirectory()).willReturn(Option.none());
         given(configuration.getMaybeTemplateCacheDuration()).willReturn(maybeCacheDuration);
 
         return new TemplateRenderer(new TemplateEngineFactory().templateEngine(configuration),

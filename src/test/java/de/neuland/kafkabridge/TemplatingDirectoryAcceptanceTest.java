@@ -72,13 +72,18 @@ class TemplatingDirectoryAcceptanceTest {
                   "code": "default"
                 }""");
 
+        var includedTemplatePath = givenTemplate("json", """
+                    "name": "Kafka Bridge Product"
+               """);
+
         var valueTemplatePath = givenTemplate("json", """
                 {
+                  [# th:insert="%s" /],
                   "type": "REGULAR",
                   "available_since": [(
                     ${ #temporals.createDateTime("2021-08-31T20:30:00").minusSeconds(5).atZone(utcZoneId).toInstant().toEpochMilli() }
                   )]
-                }""");
+                }""".formatted(includedTemplatePath.getFileName()));
 
         var topic = TemplatingDirectoryAcceptanceTest.class.getSimpleName();
         var recordKeySchemaSubject = ProductKey.class.getName();
@@ -86,8 +91,7 @@ class TemplatingDirectoryAcceptanceTest {
         var recordValueSchemaSubject = Product.class.getName();
         var recordValue = """
                 {
-                  "type": "SPECIAL",
-                  "name": "Kafka Bridge Product"
+                  "type": "SPECIAL"
                 }""";
 
         // when

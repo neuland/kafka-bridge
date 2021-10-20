@@ -11,7 +11,6 @@ import de.neuland.kafkabridge.domain.kafka.RecordKey;
 import de.neuland.kafkabridge.domain.kafka.RecordValue;
 import de.neuland.kafkabridge.domain.kafka.Topic;
 import de.neuland.kafkabridge.domain.schemaregistry.Subject;
-import de.neuland.kafkabridge.infrastructure.configuration.KafkaBridgeConfiguration;
 import de.neuland.kafkabridge.lib.templating.TemplateRenderer;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
@@ -26,19 +25,17 @@ import static de.neuland.kafkabridge.lib.http.MediaTypes.APPLICATION_AVRO_JSON;
 import static de.neuland.kafkabridge.lib.http.MediaTypes.APPLICATION_AVRO_JSON_VALUE;
 import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 
+
 @RestController
 @RequestMapping(path = "/topics")
 public class TopicsController {
-    private final KafkaBridgeConfiguration kafkaBridgeConfiguration;
     private final TemplateRenderer templateRenderer;
     private final ApplicationService applicationService;
     private final ObjectMapper objectMapper;
 
-    public TopicsController(KafkaBridgeConfiguration kafkaBridgeConfiguration,
-                            TemplateRenderer templateRenderer,
+    public TopicsController(TemplateRenderer templateRenderer,
                             ApplicationService applicationService,
                             ObjectMapper objectMapper) {
-        this.kafkaBridgeConfiguration = kafkaBridgeConfiguration;
         this.templateRenderer = templateRenderer;
         this.applicationService = applicationService;
         this.objectMapper = objectMapper;
@@ -46,34 +43,48 @@ public class TopicsController {
 
     @PostMapping(path = "/{topic}/send")
     public Mono<ResponseEntity<?>> send(@PathVariable("topic") Topic topic,
-                                        @RequestHeader(name = "Key", required = false) String key,
-                                        @RequestHeader(name = "Key-Content-Type", required = false) MediaType keyContentType,
-                                        @RequestHeader(name = "Key-Schema-Subject", required = false) Subject keySchemaSubject,
-                                        @RequestHeader(name = "Key-Template-Path", required = false) String maybeKeyTemplatePath,
+                                        @RequestHeader(name = "Key",
+                                                       required = false) String key,
+                                        @RequestHeader(name = "Key-Content-Type",
+                                                       required = false) MediaType keyContentType,
+                                        @RequestHeader(name = "Key-Schema-Subject",
+                                                       required = false) Subject keySchemaSubject,
+                                        @RequestHeader(name = "Key-Template-Path",
+                                                       required = false) String maybeKeyTemplatePath,
                                         @RequestBody(required = false) String value,
-                                        @RequestHeader(name = "Content-Type", required = false) MediaType valueContentType,
-                                        @RequestHeader(name = "Schema-Subject", required = false) Subject valueSchemaSubject,
-                                        @RequestHeader(name = "Template-Path", required = false) String maybeValueTemplatePath) {
+                                        @RequestHeader(name = "Content-Type",
+                                                       required = false) MediaType valueContentType,
+                                        @RequestHeader(name = "Schema-Subject",
+                                                       required = false) Subject valueSchemaSubject,
+                                        @RequestHeader(name = "Template-Path",
+                                                       required = false) String maybeValueTemplatePath) {
 
-        if (value == null)
+        if (value == null) {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with a non-empty value is supported. Please send the value in the body."));
+        }
 
-        if (valueSchemaSubject == null)
+        if (valueSchemaSubject == null) {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with a value schema is supported. Please specify the 'Schema-Subject' header."));
+        }
 
-        if (!APPLICATION_AVRO_JSON.equals(valueContentType))
-            return Mono.just(ResponseEntity.status(UNSUPPORTED_MEDIA_TYPE).body("Only sending of Kafka messages with an Avro schema value is supported. Please set the 'Content-Type' header to '" + APPLICATION_AVRO_JSON_VALUE + "'."));
+        if (!APPLICATION_AVRO_JSON.equals(valueContentType)) {
+            return Mono.just(ResponseEntity.status(UNSUPPORTED_MEDIA_TYPE).body(
+                "Only sending of Kafka messages with an Avro schema value is supported. Please set the 'Content-Type' header to '" + APPLICATION_AVRO_JSON_VALUE + "'."));
+        }
 
-        if (key == null)
+        if (key == null) {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with keys is supported. Please set the key in the 'Key' header."));
+        }
 
         final ConvertAndPublishCommand command;
 
         var recordValue = new RecordValue<>(asJson(value, maybeValueTemplatePath));
 
         if (APPLICATION_AVRO_JSON.equals(keyContentType)) {
-            if (keySchemaSubject == null)
-                return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with an Avro schema registered in a schema registry is supported. Please specify the 'Key-Schema-Subject' header."));
+            if (keySchemaSubject == null) {
+                return Mono.just(ResponseEntity.badRequest().body(
+                    "Only sending of Kafka messages with an Avro schema registered in a schema registry is supported. Please specify the 'Key-Schema-Subject' header."));
+            }
 
             var recordKey = new RecordKey<>(asJson(key, maybeKeyTemplatePath));
 
@@ -88,7 +99,9 @@ public class TopicsController {
                                                                      recordValue,
                                                                      valueSchemaSubject);
         } else {
-            return Mono.just(ResponseEntity.status(UNSUPPORTED_MEDIA_TYPE).body("Only sending of Kafka messages with a String key or an Avro schema key is supported. Please leave the 'Key-Content-Type' header empty or set it to '" + APPLICATION_AVRO_JSON_VALUE + "'."));
+            return Mono.just(ResponseEntity.status(UNSUPPORTED_MEDIA_TYPE).body(
+                "Only sending of Kafka messages with a String key or an Avro schema key is supported. Please leave the 'Key-Content-Type' header empty or set it to '"
+                + APPLICATION_AVRO_JSON_VALUE + "'."));
         }
 
         return Mono.fromFuture(applicationService.convertAndPublish(command)
@@ -98,14 +111,11 @@ public class TopicsController {
 
     private Json<JsonNode> asJson(String keyOrValue,
                                   String maybeTemplatePath) {
-        return Option.of(maybeTemplatePath).map(templatePath -> {
-            return kafkaBridgeConfiguration.getMaybeTemplateDirectory().fold(
-                    () -> Path.of(templatePath),
-                    templateDirectory -> templateDirectory.resolve(templatePath)
-            );
-        }).fold(
-                () -> new Json<>(Try.of(() -> objectMapper.readTree(keyOrValue)).get()),
-                templatePath -> templateRenderer.render(templatePath, new Json<>(keyOrValue))
-        );
+        return Option.of(maybeTemplatePath)
+                     .map(Path::of)
+                     .fold(
+                         () -> new Json<>(Try.of(() -> objectMapper.readTree(keyOrValue)).get()),
+                         templatePath -> templateRenderer.render(templatePath, new Json<>(keyOrValue))
+                     );
     }
 }

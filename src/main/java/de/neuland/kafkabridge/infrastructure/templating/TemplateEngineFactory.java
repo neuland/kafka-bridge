@@ -9,6 +9,9 @@ import org.thymeleaf.extras.java8time.dialect.Java8TimeDialect;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 import org.thymeleaf.templateresolver.ITemplateResolver;
 
+import java.io.File;
+import java.nio.file.FileSystem;
+
 
 @Configuration
 public class TemplateEngineFactory {
@@ -22,6 +25,9 @@ public class TemplateEngineFactory {
 
     private ITemplateResolver templateResolver(KafkaBridgeConfiguration kafkaBridgeConfiguration) {
         var fileTemplateResolver = new FileTemplateResolver();
+        kafkaBridgeConfiguration.getMaybeTemplateDirectory().peek(templateDirectory -> {
+           fileTemplateResolver.setPrefix(templateDirectory.toString() + File.separator);
+        });
         kafkaBridgeConfiguration.getMaybeTemplateCacheDuration().peek(cacheDuration -> {
             fileTemplateResolver.setCacheTTLMs(cacheDuration.toMillis());
             fileTemplateResolver.setCacheable(true);
