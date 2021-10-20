@@ -4,6 +4,7 @@ import de.neuland.kafkabridge.domain.Json;
 import de.neuland.kafkabridge.infrastructure.configuration.KafkaBridgeConfiguration;
 import de.neuland.kafkabridge.infrastructure.json.ObjectMapperFactory;
 import de.neuland.kafkabridge.infrastructure.templating.TemplateEngineFactory;
+import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,8 @@ class TemplateRendererTest {
                                              new Json<>("""
                                                             {
                                                               "id": "1234"
-                                                            }"""));
+                                                            }"""),
+                                             HashMap.empty());
 
         var dateInEpochMilliseconds = LocalDateTime.parse("2021-08-31T20:29:55")
                                                    .atZone(ZoneId.systemDefault())
@@ -82,7 +84,8 @@ class TemplateRendererTest {
             }""");
 
         templateRenderer.render(templatePath,
-                                new Json<>("{}"));
+                                new Json<>("{}"),
+                                HashMap.empty());
 
         givenTemplateContent(templatePath, """
             {
@@ -91,7 +94,8 @@ class TemplateRendererTest {
 
         // when
         var result = templateRenderer.render(templatePath,
-                                             new Json<>("{}"));
+                                             new Json<>("{}"),
+                                             HashMap.empty());
 
         assertThatJson(result.value()).isEqualTo("""
                                                      {
@@ -110,7 +114,8 @@ class TemplateRendererTest {
             }""");
 
         templateRenderer.render(templatePath,
-                                new Json<>("{}"));
+                                new Json<>("{}"),
+                                HashMap.empty());
 
         givenTemplateContent(templatePath, """
             {
@@ -119,7 +124,8 @@ class TemplateRendererTest {
 
         // when
         var result = templateRenderer.render(templatePath,
-                                             new Json<>("{}"));
+                                             new Json<>("{}"),
+                                             HashMap.empty());
 
         assertThatJson(result.value()).isEqualTo("""
                                                      {

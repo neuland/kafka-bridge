@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.neuland.kafkabridge.domain.Json;
+import io.vavr.collection.Map;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.time.ZoneId;
 
 import static java.time.ZoneOffset.UTC;
+
 
 @Component
 public class TemplateRenderer {
@@ -25,14 +27,20 @@ public class TemplateRenderer {
     }
 
     public Json<JsonNode> render(Path templatePath,
-                                 Json<String> input) {
-        return merge(new Json<>(render(templatePath)), input);
+                                 Json<String> input,
+                                 Map<ParameterKey, ParameterValue> parameters) {
+        return merge(new Json<>(render(templatePath, parameters)), input);
     }
 
-    public String render(Path templatePath) {
+    public String render(Path templatePath,
+                         Map<ParameterKey, ParameterValue> parameters) {
         var context = new Context();
         context.setVariable("utcZoneId", UTC);
         context.setVariable("systemDefaultZoneId", ZoneId.systemDefault());
+        context.setVariable("parameters", parameters.bimap(ParameterKey::value,
+                                                           ParameterValue::value)
+                                                    .toJavaMap());
+
         return templateEngine.process(templatePath.toString(), context);
     }
 

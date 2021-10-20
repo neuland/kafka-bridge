@@ -11,15 +11,27 @@ import de.neuland.kafkabridge.domain.kafka.RecordKey;
 import de.neuland.kafkabridge.domain.kafka.RecordValue;
 import de.neuland.kafkabridge.domain.kafka.Topic;
 import de.neuland.kafkabridge.domain.schemaregistry.Subject;
+import de.neuland.kafkabridge.lib.templating.ParameterKey;
+import de.neuland.kafkabridge.lib.templating.ParameterValue;
 import de.neuland.kafkabridge.lib.templating.TemplateRenderer;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Map;
+import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static de.neuland.kafkabridge.lib.http.MediaTypes.APPLICATION_AVRO_JSON;
 import static de.neuland.kafkabridge.lib.http.MediaTypes.APPLICATION_AVRO_JSON_VALUE;
@@ -29,6 +41,7 @@ import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 @RestController
 @RequestMapping(path = "/topics")
 public class TopicsController {
+    public static final Pattern TEMPLATE_PARAMETER = Pattern.compile("Template-Parameter-(.+)");
     private final TemplateRenderer templateRenderer;
     private final ApplicationService applicationService;
     private final ObjectMapper objectMapper;
@@ -57,7 +70,8 @@ public class TopicsController {
                                         @RequestHeader(name = "Schema-Subject",
                                                        required = false) Subject valueSchemaSubject,
                                         @RequestHeader(name = "Template-Path",
-                                                       required = false) String maybeValueTemplatePath) {
+                                                       required = false) String maybeValueTemplatePath,
+                                        @RequestHeader HttpHeaders allHeaders) {
 
         if (value == null) {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with a non-empty value is supported. Please send the value in the body."));
@@ -76,9 +90,24 @@ public class TopicsController {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with keys is supported. Please set the key in the 'Key' header."));
         }
 
-        final ConvertAndPublishCommand command;
+        var templateParameters = HashMap.ofEntries(Stream.ofAll(allHeaders.entrySet())
+                                                         .map(Tuple::fromEntry)
+                                                         .flatMap(entry -> Stream.ofAll(entry._2)
+                                                                                 .headOption()
+                                                                                 .map(Tuple.of(entry._1)::append))
+                                                         .flatMap(entry -> {
+                                                             var matcher = TEMPLATE_PARAMETER.matcher(entry._1);
+                                                             if (matcher.matches()) {
+                                                                 return Option.of(entry.update1(matcher.group(1)));
+                                                             }
 
-        var recordValue = new RecordValue<>(asJson(value, maybeValueTemplatePath));
+                                                             return Option.none();
+                                                         }))
+                                        .bimap(ParameterKey::new,
+                                               ParameterValue::new);
+
+        final ConvertAndPublishCommand command;
+        var recordValue = new RecordValue<>(asJson(value, maybeValueTemplatePath, templateParameters));
 
         if (APPLICATION_AVRO_JSON.equals(keyContentType)) {
             if (keySchemaSubject == null) {
@@ -86,7 +115,7 @@ public class TopicsController {
                     "Only sending of Kafka messages with an Avro schema registered in a schema registry is supported. Please specify the 'Key-Schema-Subject' header."));
             }
 
-            var recordKey = new RecordKey<>(asJson(key, maybeKeyTemplatePath));
+            var recordKey = new RecordKey<>(asJson(key, maybeKeyTemplatePath, templateParameters));
 
             command = new ConvertAndPublishAvroKeyAvroValueCommand(topic,
                                                                    recordKey,
@@ -110,12 +139,15 @@ public class TopicsController {
     }
 
     private Json<JsonNode> asJson(String keyOrValue,
-                                  String maybeTemplatePath) {
+                                  String maybeTemplatePath,
+                                  Map<ParameterKey, ParameterValue> templateVariables) {
         return Option.of(maybeTemplatePath)
                      .map(Path::of)
                      .fold(
                          () -> new Json<>(Try.of(() -> objectMapper.readTree(keyOrValue)).get()),
-                         templatePath -> templateRenderer.render(templatePath, new Json<>(keyOrValue))
+                         templatePath -> templateRenderer.render(templatePath,
+                                                                 new Json<>(keyOrValue),
+                                                                 templateVariables)
                      );
     }
 }
