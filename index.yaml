@@ -2,6 +2,19 @@ apiVersion: v1
 entries:
   kafka-bridge:
   - apiVersion: v2
+    appVersion: 0.0.8
+    created: "2021-10-21T14:46:45.769367069Z"
+    description: Http => Kafka bridge with support for Avro
+    digest: 1e41469e01dc45f9b5f1cfe206e18605f574f9023b97006aaec56a2460481e4a
+    maintainers:
+    - email: michel.zimmer@neuland-bfi.de
+      name: michel-zimmer
+    name: kafka-bridge
+    type: application
+    urls:
+    - https://github.com/neuland/kafka-bridge/releases/download/kafka-bridge-0.0.8/kafka-bridge-0.0.8.tgz
+    version: 0.0.8
+  - apiVersion: v2
     appVersion: 0.0.6
     created: "2021-09-17T10:46:49.484306716Z"
     description: Http => Kafka bridge with support for Avro
@@ -40,4 +53,4 @@ entries:
     urls:
     - https://github.com/neuland/kafka-bridge/releases/download/kafka-bridge-0.0.2/kafka-bridge-0.0.2.tgz
     version: 0.0.2
-generated: "2021-09-17T10:46:49.484320616Z"
+generated: "2021-10-21T14:46:45.769386169Z"
