@@ -7,9 +7,9 @@ import de.neuland.kafkabridge.domain.SchemaRegistryAvroSerializedDataForKafka;
 import de.neuland.kafkabridge.domain.TheConverter;
 import de.neuland.kafkabridge.domain.schemaregistry.AvroSchema;
 import de.neuland.kafkabridge.domain.schemaregistry.SchemaId;
-import io.vavr.control.Try;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 @Component
@@ -26,14 +26,11 @@ public class TheConverterImpl implements TheConverter<JsonNode> {
     }
 
     @Override
-    public Try<SchemaRegistryAvroSerializedDataForKafka> convert(Json<JsonNode> json,
-                                                                 AvroSchema avroSchema) {
+    public SchemaRegistryAvroSerializedDataForKafka convert(Json<JsonNode> json,
+                                                            AvroSchema avroSchema) throws IOException {
         var schemaWriter = avroMapper.writer(new com.fasterxml.jackson.dataformat.avro.AvroSchema(avroSchema.rawSchema()));
-
-        return Try.of(json::value)
-                  .mapTry(schemaWriter::writeValueAsBytes)
-                  .map(bytes -> prependAvroSchemaHeader(avroSchema.schemaId(), bytes))
-                  .map(SchemaRegistryAvroSerializedDataForKafka::new);
+        var bytes = schemaWriter.writeValueAsBytes(json.value());
+        return new SchemaRegistryAvroSerializedDataForKafka(prependAvroSchemaHeader(avroSchema.schemaId(), bytes));
     }
 
     private byte[] prependAvroSchemaHeader(SchemaId schemaId,

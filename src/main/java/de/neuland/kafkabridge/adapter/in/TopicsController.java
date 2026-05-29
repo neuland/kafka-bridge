@@ -1,5 +1,6 @@
 package de.neuland.kafkabridge.adapter.in;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.neuland.kafkabridge.application.ApplicationService;
@@ -14,23 +15,17 @@ import de.neuland.kafkabridge.domain.schemaregistry.Subject;
 import de.neuland.kafkabridge.lib.templating.ParameterKey;
 import de.neuland.kafkabridge.lib.templating.ParameterValue;
 import de.neuland.kafkabridge.lib.templating.TemplateRenderer;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
-import io.vavr.collection.HashMap;
-import io.vavr.collection.HashSet;
-import io.vavr.collection.Map;
-import io.vavr.collection.Stream;
-import io.vavr.control.Option;
-import io.vavr.control.Try;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.nio.file.Path;
-import java.util.List;
-import java.util.regex.Matcher;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static de.neuland.kafkabridge.lib.http.MediaTypes.APPLICATION_AVRO_JSON;
@@ -41,7 +36,7 @@ import static org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE;
 @RestController
 @RequestMapping(path = "/topics")
 public class TopicsController {
-    public static final Pattern TEMPLATE_PARAMETER = Pattern.compile("Template-Parameter-(.+)");
+    public static final Pattern TEMPLATE_PARAMETER = Pattern.compile("Template-Parameter-(.+)", Pattern.CASE_INSENSITIVE);
     private final TemplateRenderer templateRenderer;
     private final ApplicationService applicationService;
     private final ObjectMapper objectMapper;
@@ -73,7 +68,7 @@ public class TopicsController {
                                                        required = false) String maybeValueTemplatePath,
                                         @RequestHeader HttpHeaders allHeaders) {
 
-        if (value == null) {
+        if (value == null || value.isEmpty()) {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with a non-empty value is supported. Please send the value in the body."));
         }
 
@@ -90,21 +85,14 @@ public class TopicsController {
             return Mono.just(ResponseEntity.badRequest().body("Only sending of Kafka messages with keys is supported. Please set the key in the 'Key' header."));
         }
 
-        var templateParameters = HashMap.ofEntries(Stream.ofAll(allHeaders.entrySet())
-                                                         .map(Tuple::fromEntry)
-                                                         .flatMap(entry -> Stream.ofAll(entry._2)
-                                                                                 .headOption()
-                                                                                 .map(Tuple.of(entry._1)::append))
-                                                         .flatMap(entry -> {
-                                                             var matcher = TEMPLATE_PARAMETER.matcher(entry._1);
-                                                             if (matcher.matches()) {
-                                                                 return Option.of(entry.update1(matcher.group(1)));
-                                                             }
-
-                                                             return Option.none();
-                                                         }))
-                                        .bimap(ParameterKey::new,
-                                               ParameterValue::new);
+        var templateParameters = new HashMap<ParameterKey, ParameterValue>();
+        allHeaders.forEach((name, values) -> {
+            if (values.isEmpty()) return;
+            var matcher = TEMPLATE_PARAMETER.matcher(name);
+            if (matcher.matches()) {
+                templateParameters.put(new ParameterKey(matcher.group(1)), new ParameterValue(values.get(0)));
+            }
+        });
 
         final ConvertAndPublishCommand command;
         var recordValue = new RecordValue<>(asJson(value, maybeValueTemplatePath, templateParameters));
@@ -133,21 +121,26 @@ public class TopicsController {
                 + APPLICATION_AVRO_JSON_VALUE + "'."));
         }
 
-        return Mono.fromFuture(applicationService.convertAndPublish(command)
-                                                 .toCompletableFuture())
+        return Mono.fromFuture(applicationService.convertAndPublish(command))
                    .map(__ -> ResponseEntity.ok().build());
     }
 
     private Json<JsonNode> asJson(String keyOrValue,
                                   String maybeTemplatePath,
                                   Map<ParameterKey, ParameterValue> templateParameters) {
-        return Option.of(maybeTemplatePath)
-                     .map(Path::of)
-                     .fold(
-                         () -> new Json<>(Try.of(() -> objectMapper.readTree(keyOrValue)).get()),
-                         templatePath -> templateRenderer.render(templatePath,
-                                                                 new Json<>(keyOrValue),
-                                                                 templateParameters)
-                     );
+        return Optional.ofNullable(maybeTemplatePath)
+                       .map(Path::of)
+                       .<Json<JsonNode>>map(templatePath -> templateRenderer.render(templatePath,
+                                                                                    new Json<>(keyOrValue),
+                                                                                    templateParameters))
+                       .orElseGet(() -> {
+                           try {
+                               return new Json<>(objectMapper.readTree(keyOrValue));
+                           } catch (JsonProcessingException e) {
+                               throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                                                                 "Malformed JSON: " + e.getOriginalMessage(),
+                                                                 e);
+                           }
+                       });
     }
 }

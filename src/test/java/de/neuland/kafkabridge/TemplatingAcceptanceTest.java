@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -38,6 +39,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
 @ContextConfiguration(classes = { EmbeddedKafkaConfiguration.class })
 class TemplatingAcceptanceTest {
     private static final Logger LOG = LoggerFactory.getLogger(TemplatingAcceptanceTest.class);
@@ -168,6 +170,56 @@ class TemplatingAcceptanceTest {
                                   .header("Schema-Subject", recordValueSchemaSubject)
                                   .header("Template-Path", valueTemplatePath.toString())
                                   .header("Template-Parameter-type", "SPECIAL")
+                                  .bodyValue(recordValue)
+                                  .exchange();
+
+        // then
+        result.expectStatus()
+              .isOk()
+              .expectBody()
+              .isEmpty();
+        assertThat(pollAllRemainingRecords(consumer)).singleElement().satisfies(consumerRecord -> {
+            assertThat(consumerRecord.key().getCode()).isEqualTo("default");
+            assertThat(consumerRecord.value().getType()).isEqualTo(SPECIAL);
+            assertThat(consumerRecord.value().getName()).isEqualTo("Kafka Bridge Product");
+            assertThat(consumerRecord.value().getAvailableSince()).isEqualTo(Instant.parse("2021-08-31T20:29:55Z"));
+        });
+    }
+
+    @Test
+    void shouldHaveTemplateVariableWithLowercaseHeadersAsEnforcedByHTTP2() {
+        // given
+        var valueTemplatePath = givenTemplate("json", """
+                [# th:with="type=${parameters.type} ?: 'REGULAR'" ]
+                {
+                  "type": "[( ${type} )]",
+                  "available_since": [(
+                    ${ #temporals.createDateTime("2021-08-31T20:30:00").minusSeconds(5).atZone(utcZoneId).toInstant().toEpochMilli() }
+                  )]
+                }
+                [/]
+                """);
+
+        var recordKeySchemaSubject = ProductKey.class.getName();
+        var recordKey = """
+            {"code": "default"}""";
+        var topic = TemplatingAcceptanceTest.class.getSimpleName();
+        var recordValueSchemaSubject = Product.class.getName();
+        var recordValue = """
+                {
+                  "name": "Kafka Bridge Product"
+                }""";
+
+        // when — HTTP/2 lowercases all header names (RFC 7540 §8.1.2)
+        var result = webTestClient.post()
+                                  .uri("/topics/%s/send".formatted(topic))
+                                  .header("key", recordKey)
+                                  .header("key-content-type", APPLICATION_AVRO_JSON_VALUE)
+                                  .header("key-schema-subject", recordKeySchemaSubject)
+                                  .header("content-type", APPLICATION_AVRO_JSON_VALUE)
+                                  .header("schema-subject", recordValueSchemaSubject)
+                                  .header("template-path", valueTemplatePath.toString())
+                                  .header("template-parameter-type", "SPECIAL")
                                   .bodyValue(recordValue)
                                   .exchange();
 

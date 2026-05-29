@@ -4,8 +4,6 @@ import de.neuland.kafkabridge.domain.Json;
 import de.neuland.kafkabridge.infrastructure.configuration.KafkaBridgeConfiguration;
 import de.neuland.kafkabridge.infrastructure.json.ObjectMapperFactory;
 import de.neuland.kafkabridge.infrastructure.templating.TemplateEngineFactory;
-import io.vavr.collection.HashMap;
-import io.vavr.control.Option;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +19,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static java.nio.file.Files.createTempFile;
@@ -60,7 +60,7 @@ class TemplateRendererTest {
                                                             {
                                                               "id": "1234"
                                                             }"""),
-                                             HashMap.empty());
+                                             Map.of());
 
         var dateInEpochMilliseconds = LocalDateTime.parse("2021-08-31T20:29:55")
                                                    .atZone(ZoneId.systemDefault())
@@ -85,7 +85,7 @@ class TemplateRendererTest {
 
         templateRenderer.render(templatePath,
                                 new Json<>("{}"),
-                                HashMap.empty());
+                                Map.of());
 
         givenTemplateContent(templatePath, """
             {
@@ -95,7 +95,7 @@ class TemplateRendererTest {
         // when
         var result = templateRenderer.render(templatePath,
                                              new Json<>("{}"),
-                                             HashMap.empty());
+                                             Map.of());
 
         assertThatJson(result.value()).isEqualTo("""
                                                      {
@@ -115,7 +115,7 @@ class TemplateRendererTest {
 
         templateRenderer.render(templatePath,
                                 new Json<>("{}"),
-                                HashMap.empty());
+                                Map.of());
 
         givenTemplateContent(templatePath, """
             {
@@ -125,7 +125,7 @@ class TemplateRendererTest {
         // when
         var result = templateRenderer.render(templatePath,
                                              new Json<>("{}"),
-                                             HashMap.empty());
+                                             Map.of());
 
         assertThatJson(result.value()).isEqualTo("""
                                                      {
@@ -134,15 +134,15 @@ class TemplateRendererTest {
     }
 
     private TemplateRenderer givenTemplateRendererWithoutCaching() {
-        return givenTemplateRenderer(Option.none());
+        return givenTemplateRenderer(Optional.empty());
     }
 
     private TemplateRenderer givenTemplateRendererWithCaching() {
-        return givenTemplateRenderer(Option.of(ofSeconds(30)));
+        return givenTemplateRenderer(Optional.of(ofSeconds(30)));
     }
 
-    private TemplateRenderer givenTemplateRenderer(Option<Duration> maybeCacheDuration) {
-        given(configuration.getMaybeTemplateDirectory()).willReturn(Option.none());
+    private TemplateRenderer givenTemplateRenderer(Optional<Duration> maybeCacheDuration) {
+        given(configuration.getMaybeTemplateDirectory()).willReturn(Optional.empty());
         given(configuration.getMaybeTemplateCacheDuration()).willReturn(maybeCacheDuration);
 
         return new TemplateRenderer(new TemplateEngineFactory().templateEngine(configuration),

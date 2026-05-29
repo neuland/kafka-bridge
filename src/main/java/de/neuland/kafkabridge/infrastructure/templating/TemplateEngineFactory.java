@@ -10,7 +10,6 @@ import org.thymeleaf.templateresolver.FileTemplateResolver;
 import org.thymeleaf.templateresolver.ITemplateResolver;
 
 import java.io.File;
-import java.nio.file.FileSystem;
 
 
 @Configuration
@@ -25,15 +24,15 @@ public class TemplateEngineFactory {
 
     private ITemplateResolver templateResolver(KafkaBridgeConfiguration kafkaBridgeConfiguration) {
         var fileTemplateResolver = new FileTemplateResolver();
-        kafkaBridgeConfiguration.getMaybeTemplateDirectory().peek(templateDirectory -> {
-           fileTemplateResolver.setPrefix(templateDirectory.toString() + File.separator);
-        });
-        kafkaBridgeConfiguration.getMaybeTemplateCacheDuration().peek(cacheDuration -> {
-            fileTemplateResolver.setCacheTTLMs(cacheDuration.toMillis());
+        kafkaBridgeConfiguration.getMaybeTemplateDirectory().ifPresent(templateDirectory ->
+            fileTemplateResolver.setPrefix(templateDirectory.toString() + File.separator));
+        var maybeCacheDuration = kafkaBridgeConfiguration.getMaybeTemplateCacheDuration();
+        if (maybeCacheDuration.isPresent()) {
+            fileTemplateResolver.setCacheTTLMs(maybeCacheDuration.get().toMillis());
             fileTemplateResolver.setCacheable(true);
-        }).onEmpty(() -> {
+        } else {
             fileTemplateResolver.setCacheable(false);
-        });
+        }
         return fileTemplateResolver;
     }
 }

@@ -1,9 +1,9 @@
 package de.neuland.kafkabridge.domain.kafka;
 
-import io.vavr.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 public interface Publisher<K, V> {
-    Future<Void> send(Topic topic,
-                      RecordKey<K> recordKey,
-                      RecordValue<V> recordValue);
+    CompletableFuture<Void> send(Topic topic,
+                                 RecordKey<K> recordKey,
+                                 RecordValue<V> recordValue);
 }
