@@ -1,17 +1,19 @@
 package de.neuland.kafkabridge.test;
 
+
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.serializers.subject.RecordNameStrategy;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.Schema;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.testcontainers.containers.KafkaContainer;
+import org.springframework.util.StopWatch;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.lifecycle.Startables;
+import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
@@ -19,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
@@ -27,15 +28,16 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.VALU
 import static org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG;
-import static org.slf4j.LoggerFactory.getLogger;
 
 
 @TestConfiguration
+@Slf4j
 public class EmbeddedKafkaConfiguration {
-    private static final String CONFLUENT_PLATFORM_VERSION = "6.0.1";
-    private static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka")
-                                                                                  .withTag(CONFLUENT_PLATFORM_VERSION));
-    private static final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(CONFLUENT_PLATFORM_VERSION);
+    private static final String CONFLUENT_PLATFORM_VERSION = "8.2.0";
+    private static final ConfluentKafkaContainer kafka = new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka")
+                                                                                                    .withTag(CONFLUENT_PLATFORM_VERSION));
+    private static final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(DockerImageName.parse("confluentinc/cp-schema-registry")
+                                                                                                             .withTag(CONFLUENT_PLATFORM_VERSION));
 
     private static final AtomicReference<SchemaRegistryClient> schemaRegistryClientStore = new AtomicReference<>();
 
@@ -44,20 +46,12 @@ public class EmbeddedKafkaConfiguration {
     }
 
     private static void setUpKafka() {
-        if (kafka.isRunning()) {
-            return;
-        }
+        var stopWatch = new StopWatch(EmbeddedKafkaConfiguration.class.getSimpleName());
 
-        kafka.withLogConsumer(new Slf4jLogConsumer(getLogger(KafkaContainer.class)))
-             .withNetwork(Network.newNetwork())
-             .withEmbeddedZookeeper();
-
-        schemaRegistry.withLogConsumer(new Slf4jLogConsumer(getLogger(SchemaRegistryContainer.class)))
-                      .withKafka(kafka);
-
-        Startables.deepStart(Stream.of(kafka,
-                                       schemaRegistry))
-                  .join();
+        startContainer(stopWatch, kafka.withNetwork(Network.newNetwork())
+                                       .withNetworkAliases("kafka"));
+        startContainer(stopWatch, schemaRegistry.withKafka(kafka));
+        LOG.info(stopWatch.toString());
 
         System.setProperty("kafka-bridge.kafka.[bootstrap.servers]", kafka.getBootstrapServers());
         System.setProperty("kafka-bridge.schema-registry.url", schemaRegistry.getUrl());
@@ -65,6 +59,17 @@ public class EmbeddedKafkaConfiguration {
         schemaRegistryClientStore.set(new CachedSchemaRegistryClient(schemaRegistry.getUrl(),
                                                                      100,
                                                                      commonConfigs()));
+    }
+
+    private static void startContainer(StopWatch stopWatch, GenericContainer<?> container) {
+        stopWatch.start(container.getClass().getSimpleName());
+        container.start();
+        stopWatch.stop();
+
+        var taskInfo = stopWatch.lastTaskInfo();
+        LOG.info("{} started in {} ms",
+                 taskInfo.getTaskName(),
+                 taskInfo.getTimeMillis());
     }
 
     private static Map<String, Object> commonConfigs() {

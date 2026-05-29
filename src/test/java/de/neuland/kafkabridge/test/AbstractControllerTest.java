@@ -6,18 +6,20 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.MOCK;
 
-@SpringBootTest(webEnvironment = RANDOM_PORT)
+
+@SpringBootTest(webEnvironment = MOCK)
+@AutoConfigureWebTestClient
 public abstract class AbstractControllerTest {
-
     @Autowired protected WebTestClient webTestClient;
-    @MockBean protected ApplicationService applicationService;
+    @MockitoBean protected ApplicationService applicationService;
 
-    @MockBean private SchemaRegistryClient schemaRegistryClient;
-    @MockBean private KafkaProducer<String, SchemaRegistryAvroSerializedDataForKafka> stringKeyAvroValueKafkaProducer;
-    @MockBean private KafkaProducer<SchemaRegistryAvroSerializedDataForKafka, SchemaRegistryAvroSerializedDataForKafka> avroKeyAvroValueKafkaProducer;
+    @MockitoBean private SchemaRegistryClient schemaRegistryClient;
+    @MockitoBean private KafkaProducer<String, SchemaRegistryAvroSerializedDataForKafka> stringKeyAvroValueKafkaProducer;
+    @MockitoBean private KafkaProducer<SchemaRegistryAvroSerializedDataForKafka, SchemaRegistryAvroSerializedDataForKafka> avroKeyAvroValueKafkaProducer;
 }

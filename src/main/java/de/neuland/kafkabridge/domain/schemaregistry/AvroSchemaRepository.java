@@ -1,7 +1,7 @@
 package de.neuland.kafkabridge.domain.schemaregistry;
 
-import io.vavr.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 public interface AvroSchemaRepository {
-    Future<AvroSchema> findBySubject(Subject subject);
+    CompletableFuture<AvroSchema> findBySubject(Subject subject);
 }

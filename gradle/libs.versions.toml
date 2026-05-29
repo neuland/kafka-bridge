@@ -1,0 +1,41 @@
+[versions]
+avro = "1.12.1"
+confluentSchemaRegistry = "8.2.0"
+gradleAvroPlugin = "1.9.1"
+jsonUnit = "5.1.1"
+springBoot = "4.0.6"
+springDependencyManagement = "1.1.7"
+testcontainers = "2.0.5"
+thymeleafExtrasJava8time = "3.0.4.RELEASE"
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
+avro = { id = "com.github.davidmc24.gradle.plugin.avro", version.ref = "gradleAvroPlugin" }
+
+[libraries]
+# Spring Boot starters (versions managed by BOM)
+spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-log4j2 = { module = "org.springframework.boot:spring-boot-starter-log4j2" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux" }
+spring-boot-webtestclient = { module = "org.springframework.boot:spring-boot-webtestclient" }
+
+# Core (versions managed by BOM)
+commons-lang3 = { module = "org.apache.commons:commons-lang3" }
+jackson-dataformat-avro = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-avro" }
+kafka-clients = { module = "org.apache.kafka:kafka-clients" }
+reactor-test = { module = "io.projectreactor:reactor-test" }
+thymeleaf = { module = "org.thymeleaf:thymeleaf" }
+thymeleaf-extras-java8time = { module = "org.thymeleaf.extras:thymeleaf-extras-java8time", version.ref = "thymeleafExtrasJava8time" }
+
+# Versioned (not in Spring BOM)
+avro = { module = "org.apache.avro:avro", version.ref = "avro" }
+confluent-schema-registry-client = { module = "io.confluent:kafka-schema-registry-client", version.ref = "confluentSchemaRegistry" }
+confluent-kafka-avro-serializer = { module = "io.confluent:kafka-avro-serializer", version.ref = "confluentSchemaRegistry" }
+json-unit-assertj = { module = "net.javacrumbs.json-unit:json-unit-assertj", version.ref = "jsonUnit" }
+lombok = { module = "org.projectlombok:lombok" }
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
