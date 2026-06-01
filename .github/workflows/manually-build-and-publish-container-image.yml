@@ -25,8 +25,8 @@ jobs:
       - name: Build and publish container image
         run: >-
           ./gradlew bootBuildImage
-          -Pversion=$( git describe --tags --abbrev=0 )-SNAPSHOT-$( git rev-parse --short HEAD )
-          -PcontainerImageTag=$( git describe --tags )-SNAPSHOT-$( git rev-parse --short HEAD )
+          -Pversion=$( git describe --tags )
+          -PcontainerImageTag=$( git describe --tags )
           -PpublishImage=true
           -PregistryUsername=${{ github.actor }}
           -PregistryPassword=${{ secrets.GITHUB_TOKEN }}
