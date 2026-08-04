@@ -8,7 +8,14 @@ permissions:
 
 jobs:
   build-and-publish-container-image:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +33,24 @@ jobs:
         run: >-
           ./gradlew bootBuildImage
           -Pversion=$( git describe --tags )
-          -PcontainerImageTag=$( git describe --tags )
+          -PcontainerImageTag=$( git describe --tags )-${{ matrix.arch }}
           -PpublishImage=true
           -PregistryUsername=${{ github.actor }}
           -PregistryPassword=${{ secrets.GITHUB_TOKEN }}
+
+  publish-multiplatform-manifest:
+    needs: build-and-publish-container-image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Log in to GitHub Packages container registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Create and publish multi-platform manifest
+        run: >-
+          docker buildx imagetools create
+          -t ghcr.io/neuland/kafka-bridge:$( git describe --tags )
+          ghcr.io/neuland/kafka-bridge:$( git describe --tags )-amd64
+          ghcr.io/neuland/kafka-bridge:$( git describe --tags )-arm64
